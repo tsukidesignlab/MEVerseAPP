@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #000;
+  color: #fff;
+  font-family: 'Noto Sans TC', sans-serif;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  /* iOS 安全區域 */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+input,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* 範圍輸入元件視覺優化 */
+input[type='range'] {
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c8ff00;
+  cursor: pointer;
+  box-shadow: 0 0 8px #c8ff0088;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c8ff00;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px #c8ff0088;
+}
