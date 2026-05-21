@@ -34,7 +34,8 @@ function useLocalStorage(key, initialValue) {
 
 // 清除所有 ME:Verse 資料（profile 頁面用）
 function clearAllData() {
-  ['meverse:profile', 'meverse:records', 'meverse:diaries', 'meverse:missions', 'meverse:holland']
+  ['meverse:profile', 'meverse:records', 'meverse:diaries', 'meverse:missions',
+    'meverse:holland', 'meverse:energy', 'meverse:streak', 'meverse:items', 'meverse:aiInsight']
     .forEach(k => window.localStorage.removeItem(k));
 }
 
@@ -368,12 +369,49 @@ export default function MEVerse() {
     preTest: { R: 46, I: 72, A: 68, S: 35, E: 30, C: 50 },
     current: null,
   });
+  // 遊戲化系統
+  const [energy, setEnergy] = useLocalStorage('meverse:energy', 0);
+  const [streak, setStreak] = useLocalStorage('meverse:streak', { count: 0, lastDate: null, rewardsUnlocked: [] });
+  const [unlockedItems, setUnlockedItems] = useLocalStorage('meverse:items', []);
+  const [aiInsight, setAiInsight] = useLocalStorage('meverse:aiInsight', null);
+
+  // 全域動畫狀態
+  const [feedAnimation, setFeedAnimation] = useState(null); // { energy, streak, isStreakReward }
+  const [friendshipModal, setFriendshipModal] = useState(null);
+
   const [insightTab, setInsightTab] = useState('weekly');
 
   // 已有 profile 時，自動跳過登入頁
   useEffect(() => {
     if (profile && page === 'login') setPage('home');
   }, []); // eslint-disable-line
+
+  // 觸發餵食動畫：每次成功儲存紀錄就呼叫
+  const feedCharacter = (gainedEnergy = 6) => {
+    setEnergy(e => e + gainedEnergy);
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    let newStreak;
+    if (streak.lastDate === today) {
+      newStreak = streak; // 同一天，不增加
+    } else if (streak.lastDate === yesterday) {
+      newStreak = { ...streak, count: streak.count + 1, lastDate: today };
+    } else {
+      newStreak = { ...streak, count: 1, lastDate: today };
+    }
+    setStreak(newStreak);
+    const reachedReward = newStreak.count === 7 && !streak.rewardsUnlocked.includes('toast');
+    if (reachedReward) {
+      setStreak({ ...newStreak, rewardsUnlocked: [...newStreak.rewardsUnlocked, 'toast'] });
+      setUnlockedItems(items => [...items, { id: 'toast', name: '回到過去吐司', icon: '🍞', desc: '可補登過去日期' }]);
+    }
+    setFeedAnimation({ energy: gainedEnergy, streak: newStreak.count, isStreakReward: reachedReward });
+  };
+
+  const triggerFriendshipStreak = (partner = 'Mia22') => {
+    setFriendshipModal({ partner, energy: 3 });
+    setEnergy(e => e + 3);
+  };
 
   const goto = (p) => { setHistory(h => [...h, page]); setPage(p); };
   const back = () => {
@@ -445,17 +483,31 @@ export default function MEVerse() {
           <div className="h-full overflow-y-auto scrollbar-hide" style={{ background: '#000' }}>
             {page === 'login' && <LoginPage goto={goto} loadDemo={loadHarukaDemo} />}
             {page === 'character' && <CharacterPage goto={goto} setProfile={setProfile} loadDemo={loadHarukaDemo} />}
-            {page === 'home' && <HomePage goto={goto} profile={profile} records={records} loadDemo={loadHarukaDemo} />}
-            {page === 'daily' && <DailyRecordPage back={back} home={home} records={records} setRecords={setRecords} goto={goto} />}
-            {page === 'free' && <FreeSharePage back={back} home={home} diaries={diaries} setDiaries={setDiaries} />}
+            {page === 'home' && <HomePage goto={goto} profile={profile} records={records} loadDemo={loadHarukaDemo} energy={energy} streak={streak} unlockedItems={unlockedItems} />}
+            {page === 'daily' && <DailyRecordPage back={back} home={home} records={records} setRecords={setRecords} goto={goto} feedCharacter={feedCharacter} />}
+            {page === 'free' && <FreeSharePage back={back} home={home} diaries={diaries} setDiaries={setDiaries} feedCharacter={feedCharacter} />}
             {page === 'weekly' && <WeeklyReviewPage back={back} home={home} records={records} diaries={diaries} goto={goto} analysis={analysis} />}
             {page === 'holland' && <HollandPage back={back} home={home} holland={holland} setHolland={setHolland} />}
-            {page === 'mission' && <MissionPage back={back} home={home} missions={missions} setMissions={setMissions} analysis={analysis} />}
-            {page === 'insight' && <InsightPage back={back} home={home} records={records} missions={missions} analysis={analysis} tab={insightTab} setTab={setInsightTab} goto={goto} />}
+            {page === 'mission' && <MissionPage back={back} home={home} missions={missions} setMissions={setMissions} analysis={analysis} triggerFriendshipStreak={triggerFriendshipStreak} feedCharacter={feedCharacter} />}
+            {page === 'insight' && <InsightPage back={back} home={home} records={records} missions={missions} analysis={analysis} tab={insightTab} setTab={setInsightTab} goto={goto} aiInsight={aiInsight} setAiInsight={setAiInsight} profile={profile} holland={holland} />}
             {page === 'poster' && <PosterPage back={back} home={home} profile={profile} analysis={analysis} holland={holland} />}
             {page === 'friends' && <FriendsPage back={back} home={home} />}
-            {page === 'profile' && <ProfilePage back={back} home={home} profile={profile} setProfile={setProfile} />}
+            {page === 'profile' && <ProfilePage back={back} home={home} profile={profile} setProfile={setProfile} energy={energy} streak={streak} unlockedItems={unlockedItems} />}
           </div>
+
+          {/* 覆蓋動畫層 */}
+          {feedAnimation && (
+            <FeedingAnimation
+              data={feedAnimation}
+              onDone={() => setFeedAnimation(null)}
+            />
+          )}
+          {friendshipModal && (
+            <FriendshipStreakModal
+              data={friendshipModal}
+              onClose={() => setFriendshipModal(null)}
+            />
+          )}
         </div>
 
         {/* Demo 按鈕 */}
@@ -531,6 +583,7 @@ function LoginPage({ goto, loadDemo }) {
 function CharacterPage({ goto, setProfile, loadDemo }) {
   const [name, setName] = useState('');
   const [grade, setGrade] = useState('國三');
+  const [customAge, setCustomAge] = useState('');
   const [style, setStyle] = useState('安靜觀察型');
   const [createMethod, setCreateMethod] = useState('photo');
 
@@ -539,7 +592,10 @@ function CharacterPage({ goto, setProfile, loadDemo }) {
 
   const create = () => {
     setProfile({
-      name: name || 'YOU', grade, style, avatar: '✨',
+      name: name || 'YOU',
+      grade,
+      customAge: customAge || null,
+      style, avatar: '✨',
       tags: [style],
     });
     goto('home');
@@ -604,7 +660,7 @@ function CharacterPage({ goto, setProfile, loadDemo }) {
         {/* 年級 */}
         <div className="mb-3">
           <div className="text-[11px] mb-1" style={{ color: C.accent }}>GRADE · 年級</div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 mb-2">
             {grades.map(g => (
               <button key={g} onClick={() => setGrade(g)} className="py-2 rounded-lg text-xs font-bold"
                 style={{
@@ -614,6 +670,23 @@ function CharacterPage({ goto, setProfile, loadDemo }) {
                 }}>{g}</button>
             ))}
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px]" style={{ color: C.textDim }}>或自訂年齡：</span>
+            <input
+              type="number" min="6" max="99"
+              value={customAge}
+              onChange={e => setCustomAge(e.target.value)}
+              placeholder="如 14"
+              className="flex-1 px-3 py-1.5 rounded-lg text-white text-xs outline-none"
+              style={{ background: 'rgba(200,255,0,0.06)', border: `1px solid ${C.accent}44` }}
+            />
+            <span className="text-[10px]" style={{ color: C.textDim }}>歲</span>
+          </div>
+          {customAge && (
+            <div className="text-[10px] mt-1" style={{ color: C.accent }}>
+              ✓ 已設定為 {customAge} 歲（將覆蓋年級選擇）
+            </div>
+          )}
         </div>
 
         {/* 風格 */}
@@ -662,7 +735,7 @@ function CharacterPage({ goto, setProfile, loadDemo }) {
 }
 
 // ============== 3. 主頁 ==============
-function HomePage({ goto, profile, records, loadDemo }) {
+function HomePage({ goto, profile, records, loadDemo, energy = 0, streak = { count: 0 }, unlockedItems = [] }) {
   const today = new Date();
   const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
   const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()];
@@ -699,6 +772,35 @@ function HomePage({ goto, profile, records, loadDemo }) {
         <button className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <Bell size={16} color="white" />
         </button>
+      </div>
+
+      {/* 能量 + 連勝顯示條 */}
+      <div className="px-5 mb-3">
+        <div className="flex gap-2">
+          <div className="flex-1 rounded-2xl px-3 py-2 flex items-center gap-2"
+            style={{ background: `linear-gradient(135deg, ${C.accent}33, ${C.accent}11)`, border: `1px solid ${C.accent}66` }}>
+            <span className="text-xl">⚡</span>
+            <div>
+              <div className="text-[9px] uppercase tracking-wider" style={{ color: C.accent, fontFamily: "'Press Start 2P', monospace" }}>ENERGY</div>
+              <div className="text-white font-bold text-base leading-tight">{energy}</div>
+            </div>
+          </div>
+          <div className="flex-1 rounded-2xl px-3 py-2 flex items-center gap-2"
+            style={{ background: `linear-gradient(135deg, ${C.primary}55, ${C.primary}22)`, border: `1px solid ${C.primary}aa` }}>
+            <span className="text-xl">🔥</span>
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-white" style={{ fontFamily: "'Press Start 2P', monospace" }}>STREAK</div>
+              <div className="text-white font-bold text-base leading-tight">{streak.count} 天</div>
+            </div>
+          </div>
+          {unlockedItems.length > 0 && (
+            <button onClick={() => goto('profile')} className="rounded-2xl px-3 py-2 flex flex-col items-center"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="text-lg">{unlockedItems[unlockedItems.length - 1].icon}</div>
+              <div className="text-[8px] text-white mt-0.5">{unlockedItems.length}</div>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 兔子 + 對話泡泡 */}
@@ -739,33 +841,45 @@ function HomePage({ goto, profile, records, loadDemo }) {
         })}
       </div>
 
-      {/* 成長星圖 */}
+      {/* 成長地圖 - 時間軸版（對應 design 圖 6） */}
       <div className="px-5 mb-4">
         <div className="flex items-center justify-between mb-2">
           <PixelText className="text-xs text-white">YOUR GROWTH MAP</PixelText>
-          <div className="text-[10px]" style={{ color: C.textDim }}>你的成長星圖</div>
+          <div className="text-[10px]" style={{ color: C.textDim }}>你的產出與成長地圖</div>
         </div>
-        <div className="relative h-32 rounded-2xl overflow-hidden flex items-end justify-around px-4 py-3"
+        <div className="relative h-40 rounded-2xl overflow-hidden px-2 py-3"
           style={{ background: 'linear-gradient(180deg, rgba(79,79,245,0.05) 0%, rgba(200,255,0,0.05) 100%)' }}>
-          {/* 波浪線 */}
-          <svg viewBox="0 0 300 100" className="absolute inset-0 w-full h-full pointer-events-none">
-            <path d="M0,50 Q75,20 150,50 T300,50" stroke={C.accent} strokeWidth="1.5" fill="none" opacity="0.5" />
+          {/* 波浪連線 */}
+          <svg viewBox="0 0 300 100" className="absolute inset-x-0 top-8 w-full h-24 pointer-events-none" preserveAspectRatio="none">
+            <path d="M30,80 Q80,40 130,55 T230,35 T290,50" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none" strokeDasharray="2 3" />
           </svg>
-          {['觀察', '拍攝', '寫作', '互動', '實作'].map((label, i) => {
-            const heights = [85, 70, 55, 35, 50];
-            const colors = [C.accent, C.accent, C.primary, C.primary, C.accent];
-            return (
-              <div key={i} className="relative flex flex-col items-center z-10 group">
-                <div className="relative w-10 h-24 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div className="absolute bottom-0 left-0 right-0 rounded-full transition-all"
-                    style={{ height: `${heights[i]}%`, background: `linear-gradient(180deg, ${colors[i]} 0%, ${C.primary} 100%)` }} />
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full"
-                    style={{ background: colors[i], boxShadow: `0 0 12px ${colors[i]}` }} />
+          <div className="flex items-end justify-around h-full pt-2 relative z-10">
+            {(() => {
+              const monthIcons = ['📋', '🖼', '📷', '🖼', '📷']; // 對應產出類型
+              const heights = [25, 55, 80, 65, 90]; // 氣泡位置（從底部往上 %）
+              const months = ['2025/11', '2025/12', '2026/01', '2026/02', '2026/03'];
+              return months.map((m, i) => (
+                <div key={i} className="relative flex flex-col items-center" style={{ width: '18%' }}>
+                  <div className="relative w-12 h-28 rounded-full overflow-hidden mb-1"
+                    style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {/* 漸層底色 */}
+                    <div className="absolute inset-x-0 bottom-0 rounded-full"
+                      style={{ height: '60%', background: `linear-gradient(180deg, transparent, ${C.primary} 80%)`, opacity: 0.4 }} />
+                    {/* 氣泡 icon */}
+                    <div className="absolute left-1/2 -translate-x-1/2 w-9 h-9 rounded-full flex items-center justify-center text-base"
+                      style={{
+                        bottom: `${heights[i]}%`,
+                        background: `radial-gradient(circle, ${C.accent}, ${C.accent}66)`,
+                        boxShadow: `0 0 12px ${C.accent}aa`,
+                      }}>
+                      {monthIcons[i]}
+                    </div>
+                  </div>
+                  <div className="text-[8px] text-white whitespace-nowrap">{m}</div>
                 </div>
-                <div className="text-[9px] text-white mt-1">{label}</div>
-              </div>
-            );
-          })}
+              ));
+            })()}
+          </div>
         </div>
       </div>
 
@@ -782,7 +896,7 @@ function HomePage({ goto, profile, records, loadDemo }) {
 }
 
 // ============== 4. Daily Record ==============
-function DailyRecordPage({ back, home, records, setRecords, goto }) {
+function DailyRecordPage({ back, home, records, setRecords, goto, feedCharacter }) {
   const [discoveries, setDiscoveries] = useState(['', '', '']);
   const [interests, setInterests] = useState(['', '', '']);
   const [bioScore, setBioScore] = useState(7);
@@ -815,7 +929,15 @@ function DailyRecordPage({ back, home, records, setRecords, goto }) {
       summary: discoveries.find(Boolean) || '今日紀錄',
     };
     setRecords([...records, newRecord]);
-    if (andAnalyze) goto('insight'); else home();
+    // 動態計算這次得多少能量：基礎 3 + 發現數 + 興趣數 + 媒體數 + 產出方式數
+    const gainedEnergy = 3
+      + newRecord.discoveries.length
+      + newRecord.interests.length
+      + (media.length || 0)
+      + Math.min(expressions.length, 3);
+    if (feedCharacter) feedCharacter(gainedEnergy);
+    if (andAnalyze) setTimeout(() => goto('insight'), 2500);
+    else setTimeout(() => home(), 2500);
   };
 
   const onPickImage = ({ dataUrl, name }) => {
@@ -994,7 +1116,7 @@ const SubjectSlider = ({ label, tag, value, setValue }) => (
 );
 
 // ============== 5. 自由手帳 ==============
-function FreeSharePage({ back, home, diaries, setDiaries }) {
+function FreeSharePage({ back, home, diaries, setDiaries, feedCharacter }) {
   const [text, setText] = useState('');
   const [bg, setBg] = useState('dot');
   const [stickers, setStickers] = useState([]);
@@ -1019,10 +1141,12 @@ function FreeSharePage({ back, home, diaries, setDiaries }) {
       date: new Date().toISOString().slice(0, 10),
       text, bg, stickers, images,
     }]);
+    const gained = 3 + Math.min(images.length * 2, 6) + (text.length > 50 ? 2 : 1);
+    if (feedCharacter) feedCharacter(gained);
     setText('');
     setStickers([]);
     setImages([]);
-    home();
+    setTimeout(() => home(), 2500);
   };
 
   const addSticker = (s) => setStickers([...stickers, { emoji: s, x: Math.random() * 70 + 10, y: Math.random() * 60 + 10 }]);
@@ -1486,17 +1610,27 @@ const RadarChart = ({ scores, prev }) => {
 };
 
 // ============== 8. 任務推薦 ==============
-function MissionPage({ back, home, missions, setMissions, analysis }) {
+function MissionPage({ back, home, missions, setMissions, analysis, triggerFriendshipStreak, feedCharacter }) {
   const [feedbackMission, setFeedbackMission] = useState(null);
   const [filter, setFilter] = useState('all');
 
+  // 任務獎勵 item 對應
+  const rewardItems = {
+    dm1: { name: 'LV.1 植物斗篷', icon: '🌿', color: C.primary },
+    dm2: { name: 'LV.1 觀察之眼', icon: '🔭', color: C.accent },
+    dm3: { name: '光影貼紙', icon: '✨', color: C.accent },
+    dm4: { name: '思緒地圖', icon: '🗺', color: C.primary },
+    dm5: { name: '角色日記本', icon: '📖', color: C.primary },
+    dm6: { name: '友情徽章', icon: '💫', color: C.accent },
+  };
+
   const defaultMissions = [
-    { id: 'dm1', title: '7 天植物觀察挑戰', desc: '連續 7 天記錄同一株植物的變化', difficulty: 'high', time: '7 天', tag: '觀察', status: 'pending', why: '你近期最常拍植物與光影細節' },
-    { id: 'dm2', title: '生物微距記錄', desc: '拍下 5 張自然細節照片，例如葉脈、花瓣、苔蘚或昆蟲', difficulty: 'mid', time: '1-2 天', tag: '影像', status: 'pending', why: '你對自然細節敏感度高' },
-    { id: 'dm3', title: '光照變化小實驗', desc: '觀察不同光照條件下植物狀態的差異', difficulty: 'low', time: '10 分鐘', tag: '探索', status: 'pending', why: '延伸你對光影變化的興趣' },
-    { id: 'dm4', title: '把今天卡住的問題拆成 3 個原因', desc: '練習結構化思考', difficulty: 'low', time: '10 分鐘', tag: '分析', status: 'pending', why: '幫助你整理思緒' },
-    { id: 'dm5', title: '寫一段 100 字的角色日記', desc: '用第三人稱寫自己的一天', difficulty: 'mid', time: '30 分鐘', tag: '創作', status: 'pending', why: '練習文字表達' },
-    { id: 'dm6', title: '訪問一位同學的興趣', desc: '記錄他喜歡什麼、為什麼', difficulty: 'mid', time: '1 天', tag: '互動', status: 'pending', why: '幫助你看見他人視角' },
+    { id: 'dm1', title: '7 天植物觀察挑戰', desc: '連續 7 天記錄同一株植物的變化', difficulty: 'high', time: '7 天', tag: '觀察', status: 'pending', why: '你近期最常拍植物與光影細節', progress: 3, target: 7 },
+    { id: 'dm2', title: '生物微距記錄', desc: '拍下 5 張自然細節照片，例如葉脈、花瓣、苔蘚或昆蟲', difficulty: 'mid', time: '1-2 天', tag: '影像', status: 'pending', why: '你對自然細節敏感度高', progress: 0, target: 5 },
+    { id: 'dm3', title: '光照變化小實驗', desc: '觀察不同光照條件下植物狀態的差異', difficulty: 'low', time: '10 分鐘', tag: '探索', status: 'pending', why: '延伸你對光影變化的興趣', progress: 0, target: 1 },
+    { id: 'dm4', title: '把今天卡住的問題拆成 3 個原因', desc: '練習結構化思考', difficulty: 'low', time: '10 分鐘', tag: '分析', status: 'pending', why: '幫助你整理思緒', progress: 0, target: 1 },
+    { id: 'dm5', title: '寫一段 100 字的角色日記', desc: '用第三人稱寫自己的一天', difficulty: 'mid', time: '30 分鐘', tag: '創作', status: 'pending', why: '練習文字表達', progress: 0, target: 1 },
+    { id: 'dm6', title: '訪問一位同學的興趣', desc: '記錄他喜歡什麼、為什麼', difficulty: 'mid', time: '1 天', tag: '互動', status: 'pending', why: '幫助你看見他人視角', progress: 0, target: 1 },
   ];
 
   const allMissions = missions.length > 0 ? missions : defaultMissions;
@@ -1508,9 +1642,16 @@ function MissionPage({ back, home, missions, setMissions, analysis }) {
   };
 
   const submitFeedback = (fb) => {
-    if (missions.length === 0) setMissions(defaultMissions.map(m => m.id === feedbackMission.id ? { ...m, status: 'completed', feedback: fb } : m));
-    else setMissions(missions.map(m => m.id === feedbackMission.id ? { ...m, status: 'completed', feedback: fb } : m));
+    const target = missions.length === 0 ? defaultMissions : missions;
+    const updated = target.map(m => m.id === feedbackMission.id ? { ...m, status: 'completed', feedback: fb, progress: m.target } : m);
+    setMissions(updated);
     setFeedbackMission(null);
+    // 完成任務獎勵：+5 能量
+    if (feedCharacter) feedCharacter(5);
+    // 互動類任務觸發友情連勝
+    if (feedbackMission.tag === '互動' && triggerFriendshipStreak) {
+      setTimeout(() => triggerFriendshipStreak('Mia22'), 2800);
+    }
   };
 
   const diffColor = { low: C.accent, mid: C.primary, high: '#FF6B9D' };
@@ -1546,47 +1687,80 @@ function MissionPage({ back, home, missions, setMissions, analysis }) {
         </div>
 
         {/* 任務卡 */}
-        <div className="space-y-3">
-          {filtered.map((m, i) => (
-            <div key={m.id} className="relative">
-              <div className="absolute -top-2 left-3 z-10">
-                <PixelText className="text-xs px-2 py-1 rounded-md" style={{ background: '#000', color: C.accent, border: `1px solid ${C.accent}` }}>
-                  任務卡 {i + 1}
-                </PixelText>
-              </div>
-              <TornCard color={C.primary} className="mt-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <div className="text-white font-bold text-sm mb-1">{m.title}</div>
-                    <div className="text-[11px] text-white/80 mb-2">{m.desc}</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: diffColor[m.difficulty], color: '#000', fontWeight: 700 }}>
-                        {diffLabel[m.difficulty]}
-                      </span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-full text-white" style={{ background: 'rgba(0,0,0,0.3)' }}>#{m.tag}</span>
-                      {m.status === 'in-progress' && <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: C.accent, color: '#000', fontWeight: 700 }}>DAY {m.day || 1}</span>}
-                      {m.status === 'completed' && <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: C.accent, color: '#000', fontWeight: 700 }}>✓ 完成</span>}
+        <div className="space-y-4">
+          {filtered.map((m, i) => {
+            const reward = rewardItems[m.id] || { name: '隨機獎勵', icon: '🎁', color: C.primary };
+            const progressPct = m.target ? (m.progress / m.target) * 100 : 0;
+            return (
+              <div key={m.id} className="relative">
+                <div className="absolute -top-2 left-3 z-10">
+                  <PixelText className="text-xs px-2 py-1 rounded-md" style={{ background: '#000', color: C.accent, border: `1px solid ${C.accent}` }}>
+                    任務卡 {i + 1}
+                  </PixelText>
+                </div>
+                <TornCard color={C.primary} className="mt-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="text-white font-bold text-sm mb-1">{m.title}</div>
+                      <div className="text-[11px] text-white/80 mb-2">{m.desc}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: diffColor[m.difficulty], color: '#000', fontWeight: 700 }}>
+                          {diffLabel[m.difficulty]}
+                        </span>
+                        <span className="text-[9px] px-2 py-0.5 rounded-full text-white" style={{ background: 'rgba(0,0,0,0.3)' }}>#{m.tag}</span>
+                        {m.status === 'in-progress' && <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: C.accent, color: '#000', fontWeight: 700 }}>進行中</span>}
+                        {m.status === 'completed' && <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: C.accent, color: '#000', fontWeight: 700 }}>✓ 完成</span>}
+                      </div>
+                      <div className="text-[10px] text-white/70 mt-2 italic">💡 {m.why}</div>
                     </div>
-                    <div className="text-[10px] text-white/70 mt-2 italic">💡 {m.why}</div>
+                    <div className="text-3xl flex-shrink-0">{['🌿', '🔭', '💡', '📊', '✍️', '👥'][i % 6]}</div>
                   </div>
-                  <div className="text-3xl flex-shrink-0">{['🌿', '🔭', '💡', '📊', '✍️', '👥'][i % 6]}</div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  {m.status !== 'in-progress' && m.status !== 'completed' && (
-                    <button onClick={() => updateStatus(m.id, 'in-progress')} className="flex-1 py-2 rounded-lg text-[11px] font-bold"
-                      style={{ background: C.accent, color: '#000' }}>開始任務</button>
+
+                  {/* 進度條 (對應你設計圖 4) */}
+                  {(m.status === 'in-progress' || m.target > 1) && (
+                    <div className="mt-3">
+                      <div className="text-[9px] text-white/70 mb-1">任務進度條</div>
+                      <div className="relative h-5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                        <div className="absolute inset-y-0 left-0 rounded-full"
+                          style={{ width: `${progressPct}%`, background: `linear-gradient(90deg, ${C.primary}, ${C.accent})` }} />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[10px] text-white font-bold">{m.progress || 0} / {m.target}</span>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  {m.status === 'in-progress' && (
-                    <button onClick={() => setFeedbackMission(m)} className="flex-1 py-2 rounded-lg text-[11px] font-bold"
-                      style={{ background: C.accent, color: '#000' }}>完成任務</button>
+
+                  {/* 完成獎勵物品預覽 */}
+                  {m.status !== 'completed' && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-[9px] text-white/70">完成即可擁有：</span>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg"
+                        style={{ background: 'rgba(0,0,0,0.4)', border: `1px solid ${C.accent}66` }}>
+                        <span className="text-sm">{reward.icon}</span>
+                        <span className="text-[10px] text-white">✦ {reward.name} ✦</span>
+                      </div>
+                    </div>
                   )}
-                  {m.status === 'completed' && (
-                    <div className="flex-1 py-2 rounded-lg text-[11px] text-center text-white/70">已完成 ⭐</div>
-                  )}
-                </div>
-              </TornCard>
-            </div>
-          ))}
+
+                  <div className="flex gap-2 mt-3">
+                    {m.status !== 'in-progress' && m.status !== 'completed' && (
+                      <button onClick={() => updateStatus(m.id, 'in-progress')} className="flex-1 py-2 rounded-lg text-[11px] font-bold"
+                        style={{ background: C.accent, color: '#000' }}>開始任務</button>
+                    )}
+                    {m.status === 'in-progress' && (
+                      <button onClick={() => setFeedbackMission(m)} className="flex-1 py-2 rounded-lg text-[11px] font-bold"
+                        style={{ background: C.accent, color: '#000' }}>完成任務</button>
+                    )}
+                    {m.status === 'completed' && (
+                      <div className="flex-1 py-2 rounded-lg text-[11px] text-center text-white/70">
+                        已完成 ⭐ 獲得 {reward.icon} {reward.name}
+                      </div>
+                    )}
+                  </div>
+                </TornCard>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -1658,12 +1832,47 @@ function FeedbackModal({ mission, onClose, onSubmit }) {
 }
 
 // ============== 9. AI Insight ==============
-function InsightPage({ back, home, records, missions, analysis, tab, setTab, goto }) {
+function InsightPage({ back, home, records, missions, analysis, tab, setTab, goto, aiInsight, setAiInsight, profile, holland }) {
   const tabs = [
     { k: 'daily', label: 'Daily' },
     { k: 'weekly', label: 'Weekly' },
     { k: 'monthly', label: 'Monthly' },
     { k: 'yearly', label: 'Yearly' },
+  ];
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const callAI = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records, profile, missions, holland }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.hint || data.error || '分析失敗');
+        return;
+      }
+      setAiInsight({ ...data.insight, generatedAt: new Date().toISOString() });
+    } catch (err) {
+      setError('連線失敗：' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 用 AI 結果（如果有）取代靜態文字
+  const headline = aiInsight?.headline || '你最近最容易被自然、生物與細節觀察吸引，並傾向透過拍攝與比較來理解事物。';
+  const topInterests = aiInsight?.topInterests || ['自然 / 生物', '影像紀錄', '研究探索'];
+  const discoveries = aiInsight?.discoveries || ['你會主動停下來看細節', '你喜歡記錄差異，而不只是看表面', '你對文字背誦型學習投入較低'];
+  const hiddenTraits = aiInsight?.hiddenTraits || [
+    '你不是沒有方向，而是比較需要透過真實觀察累積方向感。',
+    '你在生物與自然主題上有穩定興趣，但在數學學習上容易因理解卡住而產生壓力。',
+    '你適合用影像與手帳紀錄來整理想法。',
   ];
 
   return (
@@ -1683,6 +1892,39 @@ function InsightPage({ back, home, records, missions, analysis, tab, setTab, got
         </div>
       </div>
 
+      {/* AI 開關按鈕 */}
+      <div className="px-5 mb-3">
+        <button onClick={callAI} disabled={loading} className="w-full py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2"
+          style={{
+            background: aiInsight ? `linear-gradient(135deg, ${C.accent}, ${C.primary})` : `${C.accent}22`,
+            color: aiInsight ? '#000' : C.accent,
+            border: `1px solid ${C.accent}`,
+            opacity: loading ? 0.6 : 1,
+          }}>
+          {loading ? (
+            <>
+              <div className="w-4 h-4 rounded-full border-2 animate-spin" style={{ borderColor: C.accent, borderTopColor: 'transparent' }} />
+              AI 正在分析你的紀錄...
+            </>
+          ) : aiInsight ? (
+            <>✨ AI 已分析（重新分析）</>
+          ) : (
+            <>🤖 用真實 AI 分析（呼叫 GPT-4o-mini）</>
+          )}
+        </button>
+        {error && (
+          <div className="mt-2 p-2 rounded-lg text-[10px]" style={{ background: 'rgba(255,80,80,0.1)', color: '#ff8888', border: '1px solid rgba(255,80,80,0.3)' }}>
+            ⚠️ {error}
+            <div className="mt-1 text-white/70">（本地預覽時 /api/analyze 不會運作，部署到 Vercel 並設定 API key 後才能用）</div>
+          </div>
+        )}
+        {aiInsight && (
+          <div className="text-[9px] mt-1 text-center" style={{ color: C.textDim }}>
+            ✓ AI 分析於 {new Date(aiInsight.generatedAt).toLocaleString('zh-TW', { hour12: false })} 產生
+          </div>
+        )}
+      </div>
+
       <div className="relative px-5">
         <GlowOrb color={C.primary} size={300} top="15%" opacity={0.4} />
         <GlowOrb color={C.accent} size={200} top="50%" left="80%" opacity={0.3} />
@@ -1690,22 +1932,18 @@ function InsightPage({ back, home, records, missions, analysis, tab, setTab, got
         <div className="relative z-10 text-center mb-4">
           <PixelText className="text-white text-xl block" style={{ filter: `drop-shadow(0 0 10px ${C.accent}aa)` }}>WEEKLY INSIGHT</PixelText>
           <div className="text-xs text-white mt-3 px-2" style={{ lineHeight: 1.7 }}>
-            你最近最容易被自然、生物與細節觀察吸引，並傾向透過拍攝與比較來理解事物。
+            {headline}
           </div>
         </div>
 
         {/* 興趣 Top 3 */}
         <SectionTitle title="興趣主題 TOP 3" sub="Top Interests" />
         <div className="grid grid-cols-3 gap-2 mb-4">
-          {[
-            { label: '自然 / 生物', icon: '🔬' },
-            { label: '影像紀錄', icon: '📷' },
-            { label: '研究探索', icon: '🌿' },
-          ].map((t, i) => (
+          {topInterests.slice(0, 3).map((label, i) => (
             <div key={i} className="rounded-2xl p-3 text-center"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="text-2xl mb-1">{t.icon}</div>
-              <div className="text-[10px] text-white">{t.label}</div>
+              <div className="text-2xl mb-1">{['🔬', '📷', '🌿', '✨', '🎨', '👥'][i % 6]}</div>
+              <div className="text-[10px] text-white">{label}</div>
             </div>
           ))}
         </div>
@@ -1767,11 +2005,7 @@ function InsightPage({ back, home, records, missions, analysis, tab, setTab, got
         {/* 本週發現 */}
         <SectionTitle title="本週發現" sub="This Week's Discoveries" />
         <div className="space-y-2 mb-4">
-          {[
-            '你會主動停下來看細節',
-            '你喜歡記錄差異，而不只是看表面',
-            '你對文字背誦型學習投入較低',
-          ].map((t, i) => (
+          {discoveries.slice(0, 3).map((t, i) => (
             <div key={i} className="rounded-xl p-3 flex items-start gap-2"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
@@ -1785,9 +2019,9 @@ function InsightPage({ back, home, records, missions, analysis, tab, setTab, got
         <SectionTitle title="潛在發現與特質" sub="Hidden Traits" />
         <div className="rounded-2xl p-4 mb-4 space-y-2 text-[11px] text-white"
           style={{ background: `linear-gradient(135deg, ${C.primary}22, ${C.accent}11)`, border: `1px solid ${C.accent}44`, lineHeight: 1.7 }}>
-          <div>· 你不是沒有方向，而是比較需要透過真實觀察累積方向感。</div>
-          <div>· 你在生物與自然主題上有穩定興趣，但在數學學習上容易因理解卡住而產生壓力。</div>
-          <div>· 你適合用影像與手帳紀錄來整理想法。</div>
+          {hiddenTraits.map((t, i) => (
+            <div key={i}>· {t}</div>
+          ))}
         </div>
 
         {/* Data Source */}
@@ -2170,7 +2404,7 @@ function FriendsPage({ back, home }) {
 }
 
 // ============== 12. Profile / Settings ==============
-function ProfilePage({ back, home, profile, setProfile }) {
+function ProfilePage({ back, home, profile, setProfile, energy = 0, streak = { count: 0 }, unlockedItems = [] }) {
   const p = profile || { name: 'GUEST', grade: '訪客', style: '尚未設定', avatar: '🌙', tags: [] };
 
   return (
@@ -2186,8 +2420,43 @@ function ProfilePage({ back, home, profile, setProfile }) {
             {p.avatar}
           </div>
           <PixelText className="text-white text-lg">{p.name?.toUpperCase()}</PixelText>
-          <div className="text-xs mt-1" style={{ color: C.textDim }}>{p.grade} · {p.style}</div>
+          <div className="text-xs mt-1" style={{ color: C.textDim }}>
+            {p.customAge ? `${p.customAge} 歲` : p.grade} · {p.style}
+          </div>
         </div>
+
+        {/* 能量總覽 */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="rounded-2xl p-3 text-center" style={{ background: `${C.accent}22`, border: `1px solid ${C.accent}66` }}>
+            <div className="text-2xl">⚡</div>
+            <PixelText className="text-base block mt-1" style={{ color: C.accent }}>{energy}</PixelText>
+            <div className="text-[10px] text-white">能量碎片</div>
+          </div>
+          <div className="rounded-2xl p-3 text-center" style={{ background: `${C.primary}55`, border: `1px solid ${C.primary}` }}>
+            <div className="text-2xl">🔥</div>
+            <PixelText className="text-base text-white block mt-1">{streak.count}</PixelText>
+            <div className="text-[10px] text-white">連續紀錄天數</div>
+          </div>
+        </div>
+
+        {/* 已獲得物品 */}
+        {unlockedItems.length > 0 && (
+          <div className="rounded-2xl p-4 mb-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-white font-bold">已獲得 · {unlockedItems.length}</div>
+              <PixelText className="text-[9px]" style={{ color: C.accent }}>INVENTORY</PixelText>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {unlockedItems.map((item, i) => (
+                <div key={i} className="aspect-square rounded-lg flex flex-col items-center justify-center p-1"
+                  style={{ background: `${C.accent}11`, border: `1px solid ${C.accent}44` }}>
+                  <div className="text-xl">{item.icon}</div>
+                  <div className="text-[8px] text-white text-center mt-0.5">{item.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl p-4 mb-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="text-xs text-white font-bold mb-2">標籤</div>
@@ -2232,6 +2501,121 @@ function ProfilePage({ back, home, profile, setProfile }) {
         <div className="mt-4 text-center">
           <PixelText className="text-[9px]" style={{ color: C.textDim }}>ME:VERSE PROTOTYPE · 2026</PixelText>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============== 餵食動畫 ==============
+function FeedingAnimation({ data, onDone }) {
+  const [phase, setPhase] = useState('feed'); // feed → energy → reward → close
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('energy'), 800);
+    const t2 = setTimeout(() => {
+      if (data.isStreakReward) setPhase('reward');
+      else { setPhase('close'); onDone(); }
+    }, 2200);
+    const t3 = data.isStreakReward ? setTimeout(() => { setPhase('close'); onDone(); }, 5500) : null;
+    return () => { clearTimeout(t1); clearTimeout(t2); t3 && clearTimeout(t3); };
+  }, [data, onDone]);
+
+  return (
+    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center"
+      style={{ background: 'radial-gradient(circle at 50% 50%, rgba(200,255,0,0.2) 0%, rgba(0,0,0,0.95) 60%)', backdropFilter: 'blur(4px)' }}>
+
+      {phase === 'feed' && (
+        <div className="text-center">
+          <div className="text-8xl float-anim" style={{ filter: `drop-shadow(0 0 30px ${C.accent})` }}>🐰</div>
+          <div className="text-xs mt-3 text-white">記錄被吸收中...</div>
+          <div className="flex justify-center gap-1 mt-2">
+            {['✨', '⭐', '💫'].map((s, i) => (
+              <span key={i} className="text-lg" style={{ animation: `float 1.5s ease-in-out infinite ${i * 0.2}s` }}>{s}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {phase === 'energy' && (
+        <div className="text-center" style={{ animation: 'pulse-glow 0.6s ease-out' }}>
+          <div className="text-7xl mb-3" style={{ filter: `drop-shadow(0 0 30px ${C.accent})` }}>⚡</div>
+          <div className="font-pixel text-4xl block" style={{ color: C.accent, fontFamily: "'Press Start 2P', monospace", textShadow: `0 0 20px ${C.accent}` }}>
+            +{data.energy}
+          </div>
+          <div className="text-base text-white font-bold mt-2">能量碎片</div>
+          {data.streak > 1 && (
+            <div className="mt-3 px-4 py-1.5 rounded-full text-xs font-bold inline-block"
+              style={{ background: C.primary, color: 'white' }}>
+              🔥 已連續紀錄 {data.streak} 天
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase === 'reward' && (
+        <div className="text-center px-6">
+          <PixelText className="text-2xl block mb-4" style={{ color: C.accent, fontFamily: "'Press Start 2P', monospace", textShadow: `0 0 20px ${C.accent}` }}>
+            CONGRATULATIONS!
+          </PixelText>
+          <div className="relative w-40 h-40 mx-auto mb-3">
+            <div className="absolute inset-0 rounded-3xl flex items-center justify-center"
+              style={{ background: `radial-gradient(circle, ${C.accent}99, ${C.primary} 70%)`, boxShadow: `0 0 60px ${C.accent}` }}>
+              <div className="text-7xl">🍞</div>
+            </div>
+          </div>
+          <div className="text-white font-bold text-base">連續紀錄 獲得</div>
+          <PixelText className="text-base block mt-2" style={{ color: 'white' }}>✦ 回到過去吐司 ✦</PixelText>
+          <div className="text-xs text-white mt-3 px-2" style={{ lineHeight: 1.6 }}>
+            恭喜你達成連續 7 天的紀錄！<br />
+            現在開始你可以記錄已經過去的日子！
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============== 友情連勝 ==============
+function FriendshipStreakModal({ data, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4500);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center px-6"
+      style={{ background: 'radial-gradient(circle at 50% 30%, rgba(200,255,0,0.3) 0%, rgba(0,0,0,0.95) 60%)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <PixelText className="text-2xl block mb-6" style={{ color: 'white', fontFamily: "'Press Start 2P', monospace", textShadow: `0 0 20px ${C.accent}` }}>
+        友 情 連 勝
+      </PixelText>
+
+      <div className="relative mb-6">
+        <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${C.accent}aa, transparent 70%)`, filter: 'blur(20px)', transform: 'scale(1.5)' }} />
+        <div className="relative flex gap-3 items-center">
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl"
+            style={{ background: C.accent, border: '2px solid white' }}>🧑</div>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl"
+            style={{ background: C.primary, border: '2px solid white' }}>👧</div>
+        </div>
+        <div className="flex justify-between mt-1 text-xs text-white text-center">
+          <span className="w-20">你</span>
+          <span className="w-20">{data.partner}</span>
+        </div>
+      </div>
+
+      <div className="text-white text-sm font-bold text-center mb-4">
+        你與 {data.partner} 達成友情連勝！
+      </div>
+
+      <div className="text-center">
+        <PixelText className="text-2xl block" style={{ color: C.accent }}>+{data.energy} 能量碎片</PixelText>
+        <div className="text-xs text-white mt-2">獲得「技能解鎖」鑰匙</div>
+      </div>
+
+      <div className="absolute bottom-12 flex gap-12">
+        <div className="text-3xl">⚡</div>
+        <div className="text-3xl">⚡</div>
       </div>
     </div>
   );
