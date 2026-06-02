@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_圖層_2" data-name="圖層 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 149.52 191.2">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke: #fff;
+        stroke-width: 8.45px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: none;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-3 {
+        fill: #d5ff03;
+      }
+
+      .cls-4 {
+        fill: #4858f9;
+      }
+
+      .cls-5 {
+        fill: #fff;
+        font-family: NotoSansTC-Black, 'Noto Sans TC';
+        font-size: 69.49px;
+        font-variation-settings: 'wght' 900;
+        font-weight: 800;
+        letter-spacing: .1em;
+      }
+
+      .cls-2 {
+        stroke: #000;
+        stroke-width: 2.2px;
+      }
+    </style>
+  </defs>
+  <g id="_圖層_3" data-name="圖層 3">
+    <g>
+      <path class="cls-4" d="M4.23,48.2v81.99c0,8.3,6.79,15.1,15.1,15.1h110.87c8.3,0,15.1-6.79,15.1-15.1V48.2H4.23Z"/>
+      <path class="cls-1" d="M4.23,48.2v81.99c0,8.3,6.79,15.1,15.1,15.1h110.87c8.3,0,15.1-6.79,15.1-15.1V48.2H4.23Z"/>
+      <path class="cls-2" d="M4.23,48.2v81.99c0,8.3,6.79,15.1,15.1,15.1h110.87c8.3,0,15.1-6.79,15.1-15.1V48.2H4.23Z"/>
+    </g>
+    <g>
+      <path class="cls-3" d="M145.29,19.32c0-8.3-6.79-15.1-15.1-15.1H19.32c-8.3,0-15.1,6.79-15.1,15.1v28.88h141.07v-28.88Z"/>
+      <path class="cls-1" d="M145.29,19.32c0-8.3-6.79-15.1-15.1-15.1H19.32c-8.3,0-15.1,6.79-15.1,15.1v28.88h141.07v-28.88Z"/>
+      <path class="cls-2" d="M145.29,19.32c0-8.3-6.79-15.1-15.1-15.1H19.32c-8.3,0-15.1,6.79-15.1,15.1v28.88h141.07v-28.88Z"/>
+    </g>
+    <text class="cls-5" transform="translate(28.97 120.74)"><tspan x="0" y="0">21</tspan></text>
+  </g>
+</svg>

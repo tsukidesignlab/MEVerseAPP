@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 699.14 760.2">
+  <defs>
+    <style>
+      .cls-1 {
+        isolation: isolate;
+      }
+
+      .cls-2 {
+        fill: #4858f9;
+        font-family: BlueScreenPersonalUse-Regular, 'Blue Screen Personal Use';
+        font-size: 200px;
+        letter-spacing: .1em;
+        mix-blend-mode: hard-light;
+      }
+    </style>
+  </defs>
+  <g class="cls-1">
+    <g id="_圖層_2" data-name="圖層 2">
+      <g id="_圖層_5" data-name="圖層 5">
+        <text class="cls-2" transform="translate(0 170)"><tspan x="0" y="0">Free </tspan><tspan x="0" y="240">to </tspan><tspan x="0" y="480">share</tspan></text>
+      </g>
+    </g>
+  </g>
+</svg>

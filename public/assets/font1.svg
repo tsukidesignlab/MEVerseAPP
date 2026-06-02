@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_圖層_2" data-name="圖層 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880.85 104.94">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #d5ff03;
+        font-size: 90px;
+        letter-spacing: .1em;
+      }
+
+      .cls-2 {
+        font-family: BlueScreenPersonalUse-Regular, 'Blue Screen Personal Use';
+      }
+
+      .cls-3 {
+        font-family: Bahnschrift-BoldSemiCondensed, Bahnschrift;
+        font-variation-settings: 'wght' 700, 'wdth' 87;
+        font-weight: 700;
+      }
+    </style>
+  </defs>
+  <g id="_圖層_2-2" data-name="圖層 2">
+    <text class="cls-1" transform="translate(0 76.95)"><tspan class="cls-2" x="0" y="0">Congratulations</tspan><tspan class="cls-3" x="859.76" y="0">!</tspan></text>
+  </g>
+</svg>

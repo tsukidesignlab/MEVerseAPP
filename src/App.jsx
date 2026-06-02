@@ -11,6 +11,37 @@ import {
   Lightbulb, Activity, Layers, Filter, Mic2, Hash, Play
 } from 'lucide-react';
 
+// ============== 素材載入元件 ==============
+// 你的設計素材放在 public/assets/，用 <Asset name="rabbit-1" /> 載入
+// Vite 會把 public/ 的檔案放到網站根目錄，所以路徑是 /assets/xxx
+const ASSET = (name, ext = 'svg') => `${import.meta.env.BASE_URL || '/'}assets/${name}.${ext}`;
+
+function Asset({ name, ext = 'svg', alt = '', className = '', style = {} }) {
+  return (
+    <img
+      src={ASSET(name, ext)}
+      alt={alt || name}
+      className={className}
+      style={{ display: 'block', ...style }}
+      draggable={false}
+    />
+  );
+}
+
+// 頭像：支援 emoji 或 "asset:檔名" 兩種格式
+function AvatarView({ avatar, size = 56, className = '', style = {} }) {
+  const isAsset = typeof avatar === 'string' && avatar.startsWith('asset:');
+  if (isAsset) {
+    const name = avatar.slice(6);
+    return (
+      <img src={ASSET(name)} alt="avatar" draggable={false}
+        className={className}
+        style={{ width: size, height: size, objectFit: 'cover', borderRadius: '50%', ...style }} />
+    );
+  }
+  return <span className={className} style={style}>{avatar || '🌙'}</span>;
+}
+
 // ============== localStorage hook ==============
 function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => {
@@ -197,12 +228,15 @@ const HARUKA_DEMO_RECORDS = [
 ];
 
 const FRIENDS_DATA = [
-  { name: 'Andy', avatar: '🧑', color: '#4F4FF5', activity: '正在進行「7 天植物觀察任務」', day: 'DAY 3', tag: '#自然觀察' },
-  { name: 'Cindy', avatar: '👧', color: '#C8FF00', activity: '發現了雨後葉片上的水珠', day: 'NEW', tag: '#微距' },
-  { name: 'Yuchen', avatar: '🧒', color: '#4F4FF5', activity: '完成了「訪問朋友的興趣」任務', day: '完成', tag: '#互動' },
-  { name: 'Mira', avatar: '👩', color: '#C8FF00', activity: '寫了 100 字角色日記', day: '完成', tag: '#寫作' },
-  { name: 'Kai', avatar: '🧑‍🎨', color: '#4F4FF5', activity: '正在挑戰光影攝影', day: 'DAY 2', tag: '#影像' },
-  { name: 'Lin', avatar: '👨', color: '#C8FF00', activity: '完成了「興趣關鍵字地圖」', day: '完成', tag: '#分析' },
+  { name: 'Andy', avatar: 'asset:f1', color: '#4F4FF5', activity: '正在進行「7 天植物觀察任務」', day: 'DAY 3', tag: '#自然觀察' },
+  { name: 'Cindy', avatar: 'asset:f2', color: '#C8FF00', activity: '發現了雨後葉片上的水珠', day: 'NEW', tag: '#微距' },
+  { name: 'Yuchen', avatar: 'asset:f3', color: '#4F4FF5', activity: '完成了「訪問朋友的興趣」任務', day: '完成', tag: '#互動' },
+  { name: 'Mira', avatar: 'asset:f4', color: '#C8FF00', activity: '寫了 100 字角色日記', day: '完成', tag: '#寫作' },
+  { name: 'Kai', avatar: 'asset:f6', color: '#4F4FF5', activity: '正在挑戰光影攝影', day: 'DAY 2', tag: '#影像' },
+  { name: 'Lin', avatar: 'asset:f7', color: '#C8FF00', activity: '完成了「興趣關鍵字地圖」', day: '完成', tag: '#分析' },
+  { name: 'Mia22', avatar: 'asset:f5', color: '#C8FF00', activity: '發現到了兩個新興趣！', day: 'NEW', tag: '#探索' },
+  { name: 'Sora', avatar: 'asset:f8', color: '#4F4FF5', activity: '記錄了校園裡的昆蟲', day: 'DAY 1', tag: '#觀察' },
+  { name: 'Ren', avatar: 'asset:f9', color: '#4F4FF5', activity: '完成了光影攝影挑戰', day: '完成', tag: '#影像' },
 ];
 
 const HOLLAND_QUESTIONS = [
@@ -427,7 +461,7 @@ export default function MEVerse() {
   // 載入 Haruka demo
   const loadHarukaDemo = () => {
     setProfile({
-      name: 'Haruka', grade: '國三', avatar: '🌙',
+      name: 'Haruka', grade: '國三', avatar: 'asset:people',
       style: '安靜觀察型', tags: ['自然感知型', '影像記錄型', '研究探索型'],
     });
     setRecords(HARUKA_DEMO_RECORDS);
@@ -538,9 +572,8 @@ function LoginPage({ goto, loadDemo }) {
       <GlowOrb color={C.accent} size={200} top="20%" left="80%" opacity={0.3} />
 
       <div className="text-center z-10 mt-8">
-        <div className="mb-3" style={{ filter: `drop-shadow(0 0 20px ${C.accent}88)` }}>
-          <PixelText className="text-white text-3xl block">ME:</PixelText>
-          <PixelText className="text-white text-3xl block" style={{ color: C.accent }}>VERSE</PixelText>
+        <div className="mb-3 flex justify-center" style={{ filter: `drop-shadow(0 0 20px ${C.accent}88)` }}>
+          <Asset name="font2" alt="ME:Verse" style={{ width: '70%', maxWidth: 240, height: 'auto' }} />
         </div>
         <div className="text-white text-base font-bold mt-6">人格探索數位養成手帳</div>
         <div className="text-xs mt-2 px-4" style={{ color: C.textDim, lineHeight: 1.6 }}>
@@ -548,24 +581,11 @@ function LoginPage({ goto, loadDemo }) {
         </div>
       </div>
 
-      {/* 星球 */}
-      <div className="relative z-10 my-4 float-anim">
-        <svg width="180" height="180" viewBox="0 0 180 180">
-          <defs>
-            <radialGradient id="planet" cx="40%" cy="40%">
-              <stop offset="0%" stopColor={C.accent} />
-              <stop offset="50%" stopColor={C.primary} />
-              <stop offset="100%" stopColor="#1a1a3a" />
-            </radialGradient>
-          </defs>
-          <circle cx="90" cy="90" r="60" fill="url(#planet)" />
-          <ellipse cx="90" cy="90" rx="85" ry="20" fill="none" stroke={C.accent} strokeWidth="1.5" opacity="0.6" transform="rotate(-20 90 90)" />
-          <ellipse cx="90" cy="90" rx="85" ry="20" fill="none" stroke={C.primary} strokeWidth="1.5" opacity="0.6" transform="rotate(20 90 90)" />
-          <circle cx="40" cy="40" r="2" fill={C.accent} />
-          <circle cx="150" cy="50" r="1.5" fill="white" />
-          <circle cx="160" cy="130" r="2" fill={C.accent} />
-          <circle cx="30" cy="140" r="1.5" fill="white" />
-        </svg>
+      {/* 兔子吉祥物群 */}
+      <div className="relative z-10 my-2 flex items-end justify-center gap-1 w-full">
+        <Asset name="rabbit-2" className="float-anim" style={{ width: '30%', maxWidth: 110, height: 'auto' }} />
+        <Asset name="rabbit-3" ext="webp" className="float-anim" style={{ width: '36%', maxWidth: 130, height: 'auto', animationDelay: '0.3s' }} />
+        <Asset name="Alien" className="float-anim" style={{ width: '24%', maxWidth: 90, height: 'auto', animationDelay: '0.6s' }} />
       </div>
 
       <div className="w-full space-y-3 z-10 mb-2">
@@ -742,12 +762,12 @@ function HomePage({ goto, profile, records, loadDemo, energy = 0, streak = { cou
   const p = profile || { name: 'GUEST', avatar: '🌙', grade: '訪客' };
 
   const menuItems = [
-    { k: 'daily', icon: '⭐', label: '新發現', sub: 'Discovery', target: 'daily' },
-    { k: 'daily2', icon: '🔍', label: '新興趣', sub: 'Interest', target: 'daily' },
-    { k: 'weekly', icon: '📔', label: '我的手帳', sub: 'Diary', target: 'free' },
-    { k: 'study', icon: '📚', label: '課業手帳', sub: 'Study', target: 'daily' },
-    { k: 'insight', icon: '✨', label: 'AI星象', sub: 'Insight', target: 'insight' },
-    { k: 'holland', icon: 'H', label: 'Holland', sub: '測驗', target: 'holland' },
+    { k: 'daily', icon: '⭐', asset: 'star', label: '新發現', sub: 'Discovery', target: 'daily' },
+    { k: 'daily2', icon: '🔍', label: '新觀察', sub: 'Observe', target: 'daily' },
+    { k: 'weekly', icon: '📔', asset: 'calender', label: '我的手帳', sub: 'Diary', target: 'free' },
+    { k: 'study', icon: '📚', asset: 'study', label: '課業學習', sub: 'Study', target: 'daily' },
+    { k: 'insight', icon: '✨', asset: 'star2', label: 'AI探索分析', sub: 'Insight', target: 'insight' },
+    { k: 'holland', icon: 'H', asset: 'holland', label: 'Holland', sub: '測驗', target: 'holland' },
     { k: 'review', icon: '📅', label: '本週回顧', sub: 'Review', target: 'weekly' },
     { k: 'mission', icon: '🎯', label: '任務探索', sub: 'Mission', target: 'mission' },
     { k: 'friends', icon: '🌐', label: '世界連線', sub: 'Friends', target: 'friends' },
@@ -759,9 +779,9 @@ function HomePage({ goto, profile, records, loadDemo, energy = 0, streak = { cou
       <div className="flex items-start justify-between p-5 pt-8">
         <div className="flex items-center gap-3">
           <button onClick={() => goto('profile')} className="relative">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+            <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl overflow-hidden"
               style={{ background: `radial-gradient(circle, ${C.primary}, ${C.accent}33)`, border: `2px solid ${C.accent}` }}>
-              {p.avatar || '🌙'}
+              <AvatarView avatar={p.avatar} size={56} />
             </div>
           </button>
           <div>
@@ -806,7 +826,7 @@ function HomePage({ goto, profile, records, loadDemo, energy = 0, streak = { cou
       {/* 兔子 + 對話泡泡 */}
       <div className="relative px-5 mb-4">
         <div className="absolute right-2 top-0">
-          <div className="text-5xl float-anim" style={{ filter: `drop-shadow(0 0 20px ${C.primary}aa)` }}>🐰</div>
+          <Asset name="rabbit-1" className="float-anim" style={{ width: 90, height: 'auto', filter: `drop-shadow(0 0 20px ${C.primary}aa)` }} />
         </div>
         <div className="bg-white rounded-2xl px-4 py-3 mt-12 mr-12 relative">
           <div className="absolute -top-2 right-4 w-3 h-3 bg-white rotate-45" />
@@ -826,11 +846,13 @@ function HomePage({ goto, profile, records, loadDemo, energy = 0, streak = { cou
                 boxShadow: `0 8px 20px ${C.primary}44, 0 0 0 1px rgba(255,255,255,0.05) inset`,
               }}>
               <div className="absolute top-2 left-2.5 text-[10px] text-white font-bold">{m.label}</div>
-              <div className="text-3xl mt-3" style={{ filter: `drop-shadow(0 0 8px ${C.accent})` }}>
-                {m.icon === 'H' ? (
+              <div className="mt-3 flex items-center justify-center" style={{ filter: `drop-shadow(0 0 8px ${C.accent})`, height: 44 }}>
+                {m.asset ? (
+                  <Asset name={m.asset} style={{ height: m.asset === 'study' ? 34 : 40, width: 'auto', maxWidth: '70%' }} />
+                ) : m.icon === 'H' ? (
                   <div className="w-9 h-9 flex items-center justify-center text-base font-bold rounded-md"
                     style={{ background: C.accent, color: '#000', clipPath: 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)' }}>H</div>
-                ) : m.icon}
+                ) : <span className="text-3xl">{m.icon}</span>}
               </div>
               <div className="absolute bottom-1.5 right-2 text-[8px] uppercase tracking-wider" style={{ color: C.accent }}>{m.sub}</div>
               {/* 漂浮陰影 */}
@@ -955,32 +977,40 @@ function DailyRecordPage({ back, home, records, setRecords, goto, feedCharacter 
         </div>
 
         {/* 1. 三個新發現 */}
-        <Section title="①  今日三個新發現" sub="3 Discoveries">
-          {discoveries.map((v, i) => (
-            <input key={i} value={v} onChange={e => {
-              const a = [...discoveries]; a[i] = e.target.value; setDiscoveries(a);
-            }} placeholder={[
-              '放學路上看到一隻蝴蝶停在花上',
-              '發現光影會讓葉子的顏色變不一樣',
-              '今天注意到朋友說話的方式'
-            ][i]} className="w-full px-3 py-2 rounded-lg text-white text-xs mb-2 outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
-          ))}
-        </Section>
+        <div className="relative">
+          <Asset name="Alien" className="absolute -left-2 -top-1 z-10 float-anim" style={{ width: 54, height: 'auto' }} />
+          <Section title="①  今日三個新發現" sub="3 Discoveries">
+            {discoveries.map((v, i) => (
+              <input key={i} value={v} onChange={e => {
+                const a = [...discoveries]; a[i] = e.target.value; setDiscoveries(a);
+              }} placeholder={[
+                '放學路上看到一隻蝴蝶停在花上',
+                '發現光影會讓葉子的顏色變不一樣',
+                '今天注意到朋友說話的方式'
+              ][i]} className="w-full px-3 py-2 rounded-lg text-white text-xs mb-2 outline-none"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+            ))}
+          </Section>
+        </div>
 
         {/* 2. 興趣 */}
-        <Section title="②  今日感興趣的事" sub="3 Interests">
-          {interests.map((v, i) => (
-            <input key={i} value={v} onChange={e => {
-              const a = [...interests]; a[i] = e.target.value; setInterests(a);
-            }} placeholder={['昆蟲', '光影變化', '拍攝自然細節'][i]}
-              className="w-full px-3 py-2 rounded-lg text-white text-xs mb-2 outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
-          ))}
-        </Section>
+        <div className="relative">
+          <Asset name="rabbit-1" className="absolute -right-2 top-6 z-10 float-anim" style={{ width: 60, height: 'auto' }} />
+          <Section title="②  今日感興趣的事" sub="3 Interests">
+            {interests.map((v, i) => (
+              <input key={i} value={v} onChange={e => {
+                const a = [...interests]; a[i] = e.target.value; setInterests(a);
+              }} placeholder={['昆蟲', '光影變化', '拍攝自然細節'][i]}
+                className="w-full px-3 py-2 rounded-lg text-white text-xs mb-2 outline-none"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+            ))}
+          </Section>
+        </div>
 
         {/* 3. 課業 */}
-        <Section title="③  課業感受" sub="Learning Reflection">
+        <div className="relative">
+          <Asset name="rabbit-2" className="absolute -left-2 top-6 z-10 float-anim" style={{ width: 58, height: 'auto' }} />
+          <Section title="③  課業感受" sub="Learning Reflection">
           <SubjectSlider label="生物課" tag="興趣程度" value={bioScore} setValue={setBioScore} />
           <SubjectSlider label="國文課" tag="興趣程度" value={chineseScore} setValue={setChineseScore} />
           <SubjectSlider label="數學課" tag="理解程度" value={mathScore} setValue={setMathScore} />
@@ -1012,6 +1042,7 @@ function DailyRecordPage({ back, home, records, setRecords, goto, feedCharacter 
             ))}
           </div>
         </Section>
+        </div>
 
         {/* 5. 心流 */}
         <Section title="⑤  心流時刻" sub="Flow Moment">
@@ -1187,8 +1218,13 @@ function FreeSharePage({ back, home, diaries, setDiaries, feedCharacter }) {
       <TopBar title="FREE DIARY" onBack={back} onHome={home} />
       <div className="px-5">
         <div className="text-center mb-3">
-          <PixelText className="text-sm" style={{ color: C.accent }}>MY NOTEBOOK</PixelText>
-          <div className="text-[11px] mt-1" style={{ color: C.textDim }}>自由形式手帳紀錄</div>
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Asset name="star" style={{ height: 22, width: 'auto' }} />
+            <PixelText className="text-sm text-white">新發現</PixelText>
+            <Asset name="star" style={{ height: 22, width: 'auto' }} />
+          </div>
+          <Asset name="font3" alt="Free to share" className="mx-auto" style={{ height: 30, width: 'auto' }} />
+          <div className="text-[11px] mt-2" style={{ color: C.textDim }}>任意想分享什麼都可以，以什麼形式分享也都可以！</div>
         </div>
 
         {/* 紙張風格選擇 */}
@@ -1495,8 +1531,29 @@ function HollandPage({ back, home, holland, setHolland }) {
           <PixelText className="text-white text-4xl block" style={{ filter: `drop-shadow(0 0 20px ${C.accent})` }}>{code}</PixelText>
         </div>
 
-        {/* 雷達圖 */}
-        <RadarChart scores={scores} prev={holland.preTest} />
+        {/* 雷達圖 - 你的花瓣設計 + 真實分數 */}
+        <div className="relative mx-auto my-2" style={{ width: 280, height: 280 }}>
+          <Asset name="iar" ext="webp" className="absolute inset-0 m-auto"
+            style={{ width: 230, height: 230, top: 0, bottom: 0, left: 0, right: 0, filter: `drop-shadow(0 0 20px ${C.accent}66)` }} />
+          {(() => {
+            // 六方位：R上、I右上、A右下、S下、E左下、C左上
+            const pos = {
+              R: { top: '2%', left: '50%' },
+              I: { top: '26%', left: '92%' },
+              A: { top: '74%', left: '92%' },
+              S: { top: '98%', left: '50%' },
+              E: { top: '74%', left: '8%' },
+              C: { top: '26%', left: '8%' },
+            };
+            return Object.entries(pos).map(([k, p]) => (
+              <div key={k} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ top: p.top, left: p.left }}>
+                <div className="font-bold text-sm" style={{ color: 'white', fontFamily: "'Press Start 2P', monospace" }}>{k}</div>
+                <div className="text-[11px] font-bold" style={{ color: C.accent }}>{scores[k]}</div>
+              </div>
+            ));
+          })()}
+        </div>
+        <div className="text-center text-[11px] mb-2" style={{ color: C.textDim }}>"你喜歡透過觀察、實際接觸與影像記錄來理解世界。"</div>
 
         {/* 前三高 */}
         <div className="mt-4 space-y-2">
@@ -1713,7 +1770,10 @@ function MissionPage({ back, home, missions, setMissions, analysis, triggerFrien
                       </div>
                       <div className="text-[10px] text-white/70 mt-2 italic">💡 {m.why}</div>
                     </div>
-                    <div className="text-3xl flex-shrink-0">{['🌿', '🔭', '💡', '📊', '✍️', '👥'][i % 6]}</div>
+                    {(() => {
+                      const taskAssets = ['misson1', 'misson2', 'misson1', 'misson2', 'misson1', 'misson2'];
+                      return <Asset name={taskAssets[i % 6]} className="flex-shrink-0" style={{ width: 48, height: 48, objectFit: 'contain', filter: `drop-shadow(0 0 6px ${C.accent}88)` }} />;
+                    })()}
                   </div>
 
                   {/* 進度條 (對應你設計圖 4) */}
@@ -1973,13 +2033,13 @@ function InsightPage({ back, home, records, missions, analysis, tab, setTab, got
         <SectionTitle title="你常用的探索方式" sub="Exploration Modes" />
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
-            { icon: '🔭', label: '觀察' },
-            { icon: '📸', label: '拍攝' },
-            { icon: '🔨', label: '實作' },
+            { asset: 'explore1', label: '觀察' },
+            { asset: 'explore2', label: '拍攝' },
+            { asset: 'explore3', label: '實作' },
           ].map((m, i) => (
-            <div key={i} className="rounded-2xl p-3 text-center relative"
+            <div key={i} className="rounded-2xl p-3 text-center relative flex flex-col items-center"
               style={{ background: 'rgba(79,79,245,0.15)', border: `1px solid ${C.primary}44` }}>
-              <div className="text-3xl mb-1">{m.icon}</div>
+              <Asset name={m.asset} ext="webp" style={{ height: 38, width: 'auto', marginBottom: 4 }} />
               <div className="text-[10px] text-white">{m.label}</div>
             </div>
           ))}
@@ -2250,7 +2310,9 @@ function MonthlyPoster({ profile }) {
         </div>
 
         <div className="rounded-2xl p-3 mb-3 text-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="text-5xl mb-2 float-anim">{profile?.avatar || '🌙'}</div>
+          <div className="mb-2 float-anim flex justify-center">
+            <AvatarView avatar={profile?.avatar} size={64} className="text-5xl" />
+          </div>
           <div className="text-white text-sm font-bold">{profile?.name || 'Haruka'}</div>
           <div className="text-[10px]" style={{ color: C.accent }}>觀察者 · 國三</div>
         </div>
@@ -2297,9 +2359,9 @@ function HollandPoster({ profile, holland }) {
         <PixelText className="text-white text-[10px]">YOUR HOLLAND CODE</PixelText>
         <PixelText className="text-5xl block mt-3" style={{ color: C.accent, filter: `drop-shadow(0 0 20px ${C.accent}aa)` }}>{code}</PixelText>
 
-        <div className="rounded-full w-20 h-20 mx-auto mt-4 flex items-center justify-center text-4xl"
+        <div className="rounded-full w-20 h-20 mx-auto mt-4 flex items-center justify-center text-4xl overflow-hidden"
           style={{ background: 'rgba(0,0,0,0.4)', border: `2px solid ${C.accent}` }}>
-          {profile?.avatar || '🌙'}
+          <AvatarView avatar={profile?.avatar} size={80} className="text-4xl" />
         </div>
         <div className="text-white text-sm font-bold mt-2">{profile?.name || 'Haruka'}</div>
 
@@ -2355,7 +2417,7 @@ function FriendsPage({ back, home }) {
           {FRIENDS_DATA.map((f, i) => (
             <div key={i} className="aspect-square rounded-2xl flex items-center justify-center relative overflow-hidden"
               style={{ background: f.color, border: '2px solid rgba(255,255,255,0.1)' }}>
-              <div className="text-4xl">{f.avatar}</div>
+              <AvatarView avatar={f.avatar} size="100%" style={{ borderRadius: 0, width: '100%', height: '100%' }} />
               <div className="absolute bottom-1 right-1 text-[8px] px-1.5 py-0.5 rounded"
                 style={{ background: 'rgba(0,0,0,0.6)', color: f.day === 'NEW' ? C.accent : '#fff' }}>{f.day}</div>
             </div>
@@ -2367,8 +2429,10 @@ function FriendsPage({ back, home }) {
           {FRIENDS_DATA.slice(0, 4).map((f, i) => (
             <div key={i} className="rounded-2xl p-3 flex items-start gap-2"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-xl"
-                style={{ background: f.color }}>{f.avatar}</div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-xl overflow-hidden"
+                style={{ background: f.color }}>
+                <AvatarView avatar={f.avatar} size={40} />
+              </div>
               <div className="flex-1">
                 <div className="flex items-baseline gap-2">
                   <div className="text-xs text-white font-bold">{f.name}</div>
@@ -2415,9 +2479,9 @@ function ProfilePage({ back, home, profile, setProfile, energy = 0, streak = { c
         <GlowOrb color={C.primary} size={300} top="20%" opacity={0.3} />
 
         <div className="text-center mb-4 relative z-10">
-          <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center text-5xl mb-3 float-anim"
+          <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center text-5xl mb-3 float-anim overflow-hidden"
             style={{ background: `radial-gradient(circle, ${C.primary}, ${C.accent}33)`, border: `2px solid ${C.accent}`, boxShadow: `0 0 40px ${C.primary}88` }}>
-            {p.avatar}
+            <AvatarView avatar={p.avatar} size={96} className="text-5xl" />
           </div>
           <PixelText className="text-white text-lg">{p.name?.toUpperCase()}</PixelText>
           <div className="text-xs mt-1" style={{ color: C.textDim }}>
@@ -2526,7 +2590,7 @@ function FeedingAnimation({ data, onDone }) {
 
       {phase === 'feed' && (
         <div className="text-center">
-          <div className="text-8xl float-anim" style={{ filter: `drop-shadow(0 0 30px ${C.accent})` }}>🐰</div>
+          <Asset name="rabbit-3" ext="webp" className="float-anim mx-auto" style={{ width: 180, height: 'auto', filter: `drop-shadow(0 0 30px ${C.accent})` }} />
           <div className="text-xs mt-3 text-white">記錄被吸收中...</div>
           <div className="flex justify-center gap-1 mt-2">
             {['✨', '⭐', '💫'].map((s, i) => (
@@ -2538,7 +2602,7 @@ function FeedingAnimation({ data, onDone }) {
 
       {phase === 'energy' && (
         <div className="text-center" style={{ animation: 'pulse-glow 0.6s ease-out' }}>
-          <div className="text-7xl mb-3" style={{ filter: `drop-shadow(0 0 30px ${C.accent})` }}>⚡</div>
+          <Asset name="Alien" className="mx-auto mb-3" style={{ width: 110, height: 'auto', filter: `drop-shadow(0 0 30px ${C.accent})` }} />
           <div className="font-pixel text-4xl block" style={{ color: C.accent, fontFamily: "'Press Start 2P', monospace", textShadow: `0 0 20px ${C.accent}` }}>
             +{data.energy}
           </div>
@@ -2554,15 +2618,8 @@ function FeedingAnimation({ data, onDone }) {
 
       {phase === 'reward' && (
         <div className="text-center px-6">
-          <PixelText className="text-2xl block mb-4" style={{ color: C.accent, fontFamily: "'Press Start 2P', monospace", textShadow: `0 0 20px ${C.accent}` }}>
-            CONGRATULATIONS!
-          </PixelText>
-          <div className="relative w-40 h-40 mx-auto mb-3">
-            <div className="absolute inset-0 rounded-3xl flex items-center justify-center"
-              style={{ background: `radial-gradient(circle, ${C.accent}99, ${C.primary} 70%)`, boxShadow: `0 0 60px ${C.accent}` }}>
-              <div className="text-7xl">🍞</div>
-            </div>
-          </div>
+          <Asset name="font1" alt="Congratulations!" className="mx-auto mb-4" style={{ width: '85%', maxWidth: 280, height: 'auto', filter: `drop-shadow(0 0 20px ${C.accent})` }} />
+          <Asset name="toast" ext="webp" className="mx-auto mb-3" style={{ width: 160, height: 'auto', filter: `drop-shadow(0 0 40px ${C.accent})` }} />
           <div className="text-white font-bold text-base">連續紀錄 獲得</div>
           <PixelText className="text-base block mt-2" style={{ color: 'white' }}>✦ 回到過去吐司 ✦</PixelText>
           <div className="text-xs text-white mt-3 px-2" style={{ lineHeight: 1.6 }}>
@@ -2593,10 +2650,14 @@ function FriendshipStreakModal({ data, onClose }) {
       <div className="relative mb-6">
         <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${C.accent}aa, transparent 70%)`, filter: 'blur(20px)', transform: 'scale(1.5)' }} />
         <div className="relative flex gap-3 items-center">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl"
-            style={{ background: C.accent, border: '2px solid white' }}>🧑</div>
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl"
-            style={{ background: C.primary, border: '2px solid white' }}>👧</div>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden p-1.5"
+            style={{ background: C.accent, border: '2px solid white' }}>
+            <Asset name="rabbit-1" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden p-1.5"
+            style={{ background: C.primary, border: '2px solid white' }}>
+            <Asset name="rabbit-2" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
         </div>
         <div className="flex justify-between mt-1 text-xs text-white text-center">
           <span className="w-20">你</span>
